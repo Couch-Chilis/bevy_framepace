@@ -1,9 +1,9 @@
 //! Adds diagnostic logging and a cursor for debugging.
 
-use bevy::{
-    diagnostic::{Diagnostic, DiagnosticPath, Diagnostics, RegisterDiagnostic},
-    prelude::*,
-};
+use bevy_app::prelude::*;
+use bevy_diagnostic::{Diagnostic, DiagnosticPath, Diagnostics, RegisterDiagnostic};
+use bevy_ecs::prelude::*;
+use bevy_time::prelude::*;
 
 /// Adds [`Diagnostics`] data from `bevy_framepace`
 pub struct DiagnosticsPlugin;
@@ -18,10 +18,10 @@ impl Plugin for DiagnosticsPlugin {
 }
 
 impl DiagnosticsPlugin {
-    /// [`DiagnosticId`] for the frametime
+    /// [`DiagnosticPath`] for the frametime
     pub const FRAMEPACE_FRAMETIME: DiagnosticPath =
         DiagnosticPath::const_new("framepace/frametime");
-    /// [`DiagnosticId`] for failures to meet frame time target
+    /// [`DiagnosticPath`] for failures to meet frame time target
     pub const FRAMEPACE_OVERSLEEP: DiagnosticPath =
         DiagnosticPath::const_new("framepace/oversleep");
 
