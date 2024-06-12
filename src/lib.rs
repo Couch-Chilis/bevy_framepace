@@ -1,4 +1,4 @@
-//! This is a [`bevy`] plugin that adds framepacing and framelimiting to improve input latency and
+//! This is a `bevy` plugin that adds framepacing and framelimiting to improve input latency and
 //! power use.
 //!
 //! # How it works
@@ -27,13 +27,18 @@
 
 #![deny(missing_docs)]
 
+use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_reflect::prelude::*;
+use bevy_render::{Render, RenderApp, RenderSet};
+use bevy_utils::Instant;
+
 #[cfg(not(target_arch = "wasm32"))]
-use bevy::winit::WinitWindows;
-use bevy::{
-    prelude::*,
-    render::{pipelined_rendering::RenderExtractApp, RenderApp, RenderSet},
-    utils::Instant,
-};
+use bevy_render::pipelined_rendering::RenderExtractApp;
+#[cfg(not(target_arch = "wasm32"))]
+use bevy_window::prelude::*;
+#[cfg(not(target_arch = "wasm32"))]
+use bevy_winit::WinitWindows;
 
 use std::{
     sync::{Arc, Mutex},
@@ -42,6 +47,12 @@ use std::{
 
 #[cfg(feature = "framepace_debug")]
 pub mod debug;
+
+/// Bevy does not export `RenderExtractApp` on wasm32, so we create a dummy label to ensure this
+/// compiles on wasm32.
+#[cfg(target_arch = "wasm32")]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, bevy_app::AppLabel)]
+struct RenderExtractApp;
 
 /// Adds framepacing and framelimiting functionality to your [`App`].
 #[derive(Debug, Clone, Component)]
@@ -78,7 +89,7 @@ impl Plugin for FramepacePlugin {
                 .insert_resource(limit)
                 .insert_resource(stats)
                 .add_systems(
-                    bevy::render::Render,
+                    Render,
                     framerate_limiter
                         .in_set(RenderSet::Cleanup)
                         .after(World::clear_entities),
@@ -115,6 +126,7 @@ struct FramepaceSettingsProxy {
     limiter: Arc<Mutex<Limiter>>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl FramepaceSettingsProxy {
     fn is_enabled(&self) -> bool {
         self.limiter.try_lock().iter().any(|l| l.is_enabled())
@@ -199,7 +211,7 @@ fn get_display_refresh_rate(
         Limiter::Off => {
             #[cfg(feature = "framepace_debug")]
             if settings.is_changed() {
-                info!("Frame limiter disabled");
+                bevy_log::info!("Frame limiter disabled");
             }
             return;
         }
@@ -208,7 +220,7 @@ fn get_display_refresh_rate(
     if let Ok(mut limit) = frame_limit.0.try_lock() {
         if new_frametime != *limit {
             #[cfg(feature = "framepace_debug")]
-            info!("Frametime limit changed to: {:?}", new_frametime);
+            bevy_log::info!("Frametime limit changed to: {:?}", new_frametime);
             *limit = new_frametime;
         }
     }
@@ -249,6 +261,7 @@ pub struct FramePaceStats {
 /// `spin_sleep` sleeps as long as possible given the platform's sleep accuracy, and spins for the
 /// remainder. The dependency is however not WASM compatible, which is fine, because frame limiting
 /// should not be used in a browser; this would compete with the browser's frame limiter.
+#[allow(unused_variables)]
 fn framerate_limiter(
     mut timer: ResMut<FrameTimer>,
     target_frametime: Res<FrametimeLimit>,
